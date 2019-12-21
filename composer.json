@@ -1,0 +1,202 @@
+{
+    "name": "drupal-composer/drupal-project",
+    "description": "Project template for Drupal 7 projects with composer",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "",
+            "role": ""
+        }
+    ],
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packages.drupal.org/7"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/generalredneck/farmOS.git"
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "jashkenas/backbone",
+                "version": "1.4.0",
+                "type": "drupal-library",
+                "dist": {
+                    "type": "zip",
+                    "url": "https://github.com/jashkenas/backbone/archive/1.4.0.zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "samsono/easy-responsive-tabs",
+                "version": "1.2.2",
+                "type": "drupal-library",
+                "dist": {
+                    "url": "https://github.com/samsono/Easy-Responsive-Tabs-to-Accordion/archive/1.2.2.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "modernizr/modernizr",
+                "version": "2.8.3",
+                "type": "drupal-library",
+                "dist": {
+                    "url": "https://github.com/Modernizr/Modernizr/archive/v2.8.3.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "openlayers/openlayers3",
+                "version": "4.6.4",
+                "type": "drupal-library",
+                "dist": {
+                    "url": "https://github.com/openlayers/openlayers/releases/download/v4.6.4/v4.6.4.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "jashkenas/underscore",
+                "version": "1.9.1",
+                "type": "drupal-library",
+                "dist": {
+                    "url": "https://github.com/jashkenas/underscore/archive/1.9.1.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "jackmoore/colorbox",
+                "version": "1.0",
+                "type": "drupal-library",
+                "dist": {
+                    "url": "https://github.com/jackmoore/colorbox/archive/1.x.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "drupal/farm_eggs",
+                "version": "1.0-beta4",
+                "type": "drupal-module",
+                "source": {
+                    "url": "https://github.com/farmOS/farm_eggs.git",
+                    "type": "git",
+                    "reference": "a83a61e275a04aa6e76edecc6d54fbe9b0b20f8c"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "drupal/farm_bee",
+                "version": "1.0-beta5",
+                "type": "drupal-module",
+                "source": {
+                    "url": "https://github.com/farmOS/farm_bee.git",
+                    "type": "git",
+                    "reference": "96feaedd1fd8c930bd1ddcaa45e95a650cc8e578"
+                }
+            }
+        }
+    ],
+    "require": {
+        "php": ">=5.3.3",
+        "ext-curl": "*",
+        "ext-gd": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-pdo": "*",
+        "ext-xml": "*",
+        "composer/installers": "^1.2",
+        "composer/semver": "^1.4",
+        "cweagans/composer-patches": "^1.6.5",
+        "drupal-composer/preserve-paths": "^0.1",
+        "drupal/composer_autoloader": "^1.0",
+        "drupal/drupal": "^7.62",
+        "drupal/exif_orientation": "^1.2",
+        "drupal/farm": "1.2.6",
+        "drupal/farm_bee": "1.0-beta5",
+        "drupal/farm_eggs": "1.0-beta4",
+        "drupal/module_filter": "^2.2",
+        "drupal/navbar": "^1.7",
+        "drupal/pathauto_entity": "^1.0",
+        "drush/drush": "^8.0",
+        "jackmoore/colorbox": "*",
+        "jashkenas/backbone": "*",
+        "jashkenas/underscore": "*",
+        "modernizr/modernizr": "*",
+        "openlayers/openlayers3": "*",
+        "samsono/easy-responsive-tabs": "*",
+        "symfony/filesystem": "~2.7|^3",
+        "webflo/drupal-finder": "^1.0.0"
+    },
+    "conflict": {
+        "drupal/core": "8.*"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "classmap": [
+            "scripts/composer/ScriptHandler.php"
+        ]
+    },
+    "scripts": {
+        "pre-install-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
+        ],
+        "pre-update-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
+        ],
+        "post-install-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles"
+        ],
+        "post-update-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles"
+        ],
+        "post-create-project-cmd": [
+            "DrupalProject\\composer\\ScriptHandler::removeInternalFiles"
+        ]
+    },
+    "extra": {
+        "installer-paths": {
+            "web/": ["type:drupal-core"],
+            "web/profiles/{$name}/": ["type:drupal-profile"],
+            "web/sites/all/drush/{$name}/": ["type:drupal-drush"],
+            "web/sites/all/libraries/{$name}/": ["type:drupal-library"],
+            "web/sites/all/modules/contrib/{$name}/": ["type:drupal-module"],
+            "web/sites/all/themes/contrib/{$name}/": ["type:drupal-theme"]
+        },
+        "patches": {
+            "cweagans/composer-patches": {
+                "Call the preserve paths hooks": "https://github.com/SebCorbin/composer-patches/commit/1cb9bacba51f8bba0c5f3f322c3bb61e4ceae974.patch"
+	    },
+	    "drupal/drupal": {
+	    	"Remove Permission hardening": "https://www.drupal.org/project/drupal/issues/1232572#comment-12980686"
+            }
+        },
+        "preserve-paths": [
+            "web/sites"
+        ]
+    }
+}

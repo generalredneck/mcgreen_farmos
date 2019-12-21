@@ -1,0 +1,11 @@
+name: farm
+recipe: drupal7
+config:
+  webroot: web
+services:
+  appserver:
+    build_as_root:
+      - docker-php-ext-enable bcmath
+drush:
+  service: appserver
+  cmd: "drush --root=/app/web"
