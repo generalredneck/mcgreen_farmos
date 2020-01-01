@@ -1,0 +1,226 @@
+<?php
+
+function mcgreen_acres_farm_forms_menu() {
+  $items = array();
+
+  $items['mcgreen-acres/eggs'] = array(
+    'title' => 'Report Eggs',
+    'page callback' => 'mcgreen_acres_farm_forms_egg_report',
+    'access callback' => 'mcgreen_acres_farm_forms_egg_report_access',
+  );
+  $items['mcgreen-acres/eggs/logs'] = array(
+    'title' => 'Report Eggs',
+    'page callback' => 'mcgreen_acres_farm_forms_egg_report_logs',
+    'access callback' => 'mcgreen_acres_farm_forms_egg_report_access',
+  );
+  $items['mcgreen-acres/eggs/log/edit'] = array(
+    'title' => 'Report Eggs',
+    'page callback' => 'mcgreen_acres_farm_forms_egg_report_log_edit',
+    'access callback' => 'mcgreen_acres_farm_forms_egg_report_access',
+  );
+
+  return $items;
+}
+
+function mcgreen_acres_farm_forms_egg_report_logs() {
+  $query_params = drupal_get_query_parameters();
+  $asset_id = $query_params['asset'];
+  $start = strtotime($query_params['start']);
+  $end = strtotime($query_params['end']);
+  $limit = 50;
+  $output = array();
+  $result = _mcgreen_acres_farm_forms_get_laying_assets($asset_id);
+  foreach ($result as $row) {
+    if (empty($row->id)) {
+      continue;
+    }
+    // Load the asset.
+    $asset = farm_asset_load($row->id);
+    break;
+  }
+  if (!empty($asset)) {
+    $query = new EntityFieldQuery();
+    $result = $query->entityCondition('entity_type', 'log')
+      ->propertyCondition('type', 'farm_harvest')
+      ->fieldCondition('field_farm_asset', 'target_id', $asset->id)
+      ->propertyCondition('timestamp', $start, '>=')
+      ->propertyCondition('timestamp', $end, '<')
+      ->range(0, $limit)
+      ->execute();
+    if (isset($result['log'])) {
+      $log_ids = array_keys($result['log']);
+      $logs = log_load_multiple($log_ids);
+      foreach ($logs as $log) {
+        $wrapper = entity_metadata_wrapper('log', $log);
+        $quantity = 0;
+        foreach ($wrapper->field_farm_quantity as $fc_quantity) {
+          $quantity_value = $fc_quantity->field_farm_quantity_value->value();
+          if (!empty($quantity_value) && !empty($quantity_value['fraction'])) {
+            $quantity = $quantity_value['fraction']->toDecimal(0, TRUE);
+          }
+          break;
+        }
+        $output[] = array(
+          'title' => $log->name,
+          'start' => date('Y-m-d', $log->timestamp),
+          'id' => $log->id,
+          'extendedProps' => array(
+            'quantity' => $quantity,
+            'asset' => $asset->id,
+          )
+        );
+      }
+    }
+  }
+
+  drupal_json_output($output);
+}
+
+function mcgreen_acres_farm_forms_egg_report_log_edit() {
+
+  $output = array(
+    'success' => FALSE,
+    'message' => t('An error has occurred'),
+  );
+  $values = array(
+    'log_id' => !empty($_POST['log_id']) ? (int) $_POST['log_id'] : NULL,
+    'asset_id' => !empty($_POST['asset_id']) ? (int) $_POST['asset_id'] : NULL,
+    'quantity' => !empty($_POST['quantity']) ? (int) $_POST['quantity'] : 0,
+    'date' => !empty($_POST['date']) ? $_POST['date'] : date('Y-m-d'),
+  );
+  if (empty($values['asset_id'])) {
+    $output['message'] = t('Value asset_id must be set.');
+    drupal_json_output($output);
+    return;
+  }
+
+  // The log type will be a harvest.
+  $log_type = 'farm_harvest';
+  // TODO: validate laying assets.
+  $asset = farm_asset_load($values['asset_id']);
+  if (empty($asset)) {
+    $output['message'] = t("Asset doesn't exist.");
+    drupal_json_output($output);
+    return;
+  }
+
+  // Set log name.
+  $log_name = t(
+    '@qty @asset_name egg(s)',
+    array(
+      '@qty' => $values['quantity'],
+      '@asset_name' => $asset->name,
+    )
+  );
+
+  // Assemble an array of measurements.
+  $measurements = array(
+    array(
+      'measure' => 'count',
+      'value' => $values['quantity'],
+      'units' => t('egg(s)'),
+      'label' => '',
+    ),
+  );
+
+  if (!empty($values['log_id'])) {
+    $wrapper = entity_metadata_wrapper('log', $values['log_id']);
+    foreach ($wrapper->field_farm_quantity as $fc_quantity) {
+      $fc_quantity->delete();
+    }
+    farm_quantity_log_add_measurements($wrapper->value(), $measurements);
+    $wrapper->name->set($log_name);
+    $wrapper->save();
+  }
+  else {
+    // Create a new farm quantity log.
+    $log = farm_quantity_log_create($log_type, $log_name, strtotime($values['date']), TRUE, array($asset), $measurements);
+  }
+  $output['success'] = TRUE;
+  $output['message'] = t('Save successful.');
+  drupal_json_output($output);
+}
+
+function mcgreen_acres_farm_forms_egg_report() {
+  $module_path = drupal_get_path('module', 'mcgreen_acres_farm_forms');
+  drupal_add_js($module_path . '/js/bootstrapmodal.min.js');
+  drupal_add_css($module_path . '/css/bootstrapmodal.css');
+  drupal_add_css('https://unpkg.com/@fullcalendar/core@4.3.1/main.min.css', array('type' => 'external'));
+  drupal_add_css('https://unpkg.com/@fullcalendar/daygrid@4.3.0/main.min.css', array('type' => 'external'));
+  drupal_add_css('https://unpkg.com/@fullcalendar/timegrid@4.3.0/main.min.css', array('type' => 'external'));
+  drupal_add_js('https://unpkg.com/@fullcalendar/core@4.3.1/main.min.js', array('type ' => 'external'));
+  drupal_add_js('https://unpkg.com/@fullcalendar/interaction@4.3.0/main.min.js');
+  drupal_add_js('https://unpkg.com/@fullcalendar/daygrid@4.3.0/main.min.js');
+  drupal_add_js('https://unpkg.com/@fullcalendar/timegrid@4.3.0/main.min.js');
+  $result = _mcgreen_acres_farm_forms_get_laying_assets();
+  $assets = array();
+  $colors = array(
+    'yellow' => 'black',
+    'green' => 'white',
+    'blue' => 'white',
+    'cyan' => 'black',
+    'red' => 'white',
+    'purple' => 'white',
+    'brown' => 'white',
+    'black' => 'white',
+  );
+  $bg_colors = array_keys($colors);
+  $settings = array();
+  foreach ($result as $key => $row) {
+    $asset = farm_asset_load($row->id);
+    $assets[$row->id] = $asset->name;
+    $bg_color = $bg_colors[$key];
+    $settings[] = array(
+      'id' => $row->id,
+      'name' => $asset->name,
+      'color' => $bg_color,
+      'textColor' => $colors[$bg_color],
+    );
+  }
+
+  drupal_add_js(
+    array(
+      'mcgreen_acres_farm_forms' => array(
+        'egg_report' => array(
+          'assets' => $settings,
+        ),
+      ),
+    ),
+    'setting'
+  );
+  drupal_add_js($module_path . '/js/egg_report.js');
+  $output = array(
+    '#theme' => 'mcgreen_acres_farm_forms_egg_report',
+    '#assets' => $assets,
+  );
+  return $output;
+}
+
+function mcgreen_acres_farm_forms_egg_report_access() {
+  return user_access('view all logs') || user_access('view any farm_harvest log entities') || user_access('view own farm_harvest log entities');
+}
+
+function mcgreen_acres_farm_forms_theme() {
+  $theme = array();
+  $theme['mcgreen_acres_farm_forms_egg_report'] = array(
+    'template' => 'mcgreen_acres_farm_forms_egg_report',
+    'variables' => array(
+      'assets' => array(),
+    ),
+  );
+  return $theme;
+}
+
+function _mcgreen_acres_farm_forms_get_laying_assets($asset_id = NULL) {
+  $query = db_select('farm_asset_property', 'p');
+  $query->leftJoin('farm_asset', 'a', 'p.id = a.id');
+  $query->fields('p', array('id'))
+    ->condition('p.name', 'farm_eggs')
+    ->condition('a.type', array('animal', 'group'))
+    ->orderBy('p.id', 'ASC');
+  if (!empty($asset_id)) {
+    $query->condition('a.id', $asset_id);
+  }
+  $result = $query->execute();
+  return $result;
+}
